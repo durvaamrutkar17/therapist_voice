@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Empathy Bot</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
+            max-height: 800px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #6a5acd; /* Slate Blue */
+            color: white;
+            padding: 15px 20px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h2 {
+            margin: 0;
+            font-size: 1.4em;
+        }
+
+        .header p {
+            margin: 4px 0 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .voice-toggle {
+            background: none;
+            border: 2px solid white;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .voice-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            padding: 12px 18px;
+            border-radius: 20px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+
+        .message.user {
+            background-color: #6a5acd;
+            color: white;
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+        }
+
+        .message.bot {
+            background-color: #e5e7eb;
+            color: #333;
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+        }
+
+        .message.bot.error {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+
+        .crisis-footer {
+            padding: 10px 20px;
+            text-align: center;
+            background: #fdfde7;
+            border-top: 1px solid #e0e0e0;
+            font-size: 0.85em;
+        }
+
+        .crisis-footer p {
+            margin: 0;
+        }
+
+        .chat-form {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            background: #f8f8f8;
+        }
+
+        #message-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 1em;
+        }
+
+        #message-input:focus {
+            outline: none;
+            border-color: #6a5acd;
+        }
+        
+        #message-input:disabled {
+            background-color: #f0f0f0;
+        }
+
+        #send-button {
+            padding: 12px 20px;
+            border: none;
+            background-color: #6a5acd;
+            color: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+
+        #send-button:hover {
+            background-color: #5a4bbf;
+        }
+
+        #send-button:disabled {
+            background-color: #a9a1e2;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <div class="header-content">
+                <h2>AI Empathy Bot</h2>
+                <p>A supportive space to talk. Not a replacement for a therapist.</p>
+            </div>
+            <button id="voice-toggle" class="voice-toggle" title="Toggle Voice Output">🔊</button>
+        </div>
+        <div class="chat-window" id="chat-window">
+            <!-- Messages will be injected here by JavaScript -->
+        </div>
+        <div class="crisis-footer">
+            <p><b>In a crisis?</b> Call or text 988 in the US & Canada, or find a local helpline.</p>
+        </div>
+        <form class="chat-form" id="chat-form">
+            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" disabled>
+            <button type="submit" id="send-button" disabled>Send</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatWindow = document.getElementById('chat-window');
+            const chatForm = document.getElementById('chat-form');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const voiceToggle = document.getElementById('voice-toggle');
+
+            let messageHistory = [];
+            let isVoiceEnabled = true;
+
+            // --- Voice Synthesis Function ---
+            const speak = (text) => {
+                if (!isVoiceEnabled || !('speechSynthesis' in window)) {
+                    return;
+                }
+                // Cancel any previous speech to prevent overlap
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                // Optional: you can try to select a more pleasant voice
+                // let voices = window.speechSynthesis.getVoices();
+                // utterance.voice = voices.find(v => v.name.includes("Google") || v.name.includes("Siri"));
+                utterance.rate = 1.0;
+                utterance.pitch = 1.0;
+                window.speechSynthesis.speak(utterance);
+            };
+
+            // --- UI Helper Functions ---
+            const addMessage = (content, role) => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}`; // 'user' or 'bot'
+                messageDiv.textContent = content;
+                chatWindow.appendChild(messageDiv);
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll
+            };
+            
+            const toggleInput = (enabled) => {
+                messageInput.disabled = !enabled;
+                sendButton.disabled = !enabled;
+                if (enabled) {
+                    messageInput.placeholder = "Type your message here...";
+                    messageInput.focus();
+                } else {
+                    messageInput.placeholder = "Waiting for response...";
+                }
+            };
+
+            // --- Event Listeners ---
+            voiceToggle.addEventListener('click', () => {
+                isVoiceEnabled = !isVoiceEnabled;
+                voiceToggle.textContent = isVoiceEnabled ? '🔊' : '🔇';
+                if (!isVoiceEnabled) {
+                    window.speechSynthesis.cancel(); // Stop speaking immediately if muted
+                }
+            });
+
+            chatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userMessage = messageInput.value.trim();
+                if (!userMessage) return;
+
+                addMessage(userMessage, 'user');
+                messageHistory.push({ role: 'user', content: userMessage });
+                messageInput.value = '';
+                toggleInput(false);
+
+                try {
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ history: messageHistory })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'An unknown error occurred.');
+                    }
+
+                    const data = await response.json();
+                    const botMessage = data.response;
+
+                    addMessage(botMessage, 'bot');
+                    messageHistory.push({ role: 'assistant', content: botMessage });
+                    speak(botMessage); // <--- SPEAK THE BOT'S RESPONSE
+
+                } catch (error) {
+                    console.error('Chat Error:', error);
+                    addMessage(`Error: ${error.message}`, 'bot error');
+                } finally {
+                    toggleInput(true);
+                }
+            });
+
+            // --- Initial Bot Greeting ---
+            const getInitialGreeting = async () => {
+                try {
+                    // Add a temporary "loading" message
+                    addMessage("...", "bot");
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ history: [] }) // Send empty history to get the initial prompt
+                    });
+
+                    if (!response.ok) throw new Error('Failed to connect to the bot.');
+
+                    const data = await response.json();
+                    const botMessage = data.response;
+
+                    // Replace the "loading" message with the actual greeting
+                    chatWindow.lastChild.textContent = botMessage;
+                    messageHistory.push({ role: 'assistant', content: botMessage });
+                    speak(botMessage); // <--- SPEAK THE GREETING
+
+                } catch (error) {
+                    chatWindow.lastChild.textContent = `Error: Could not load the bot. Please refresh the page.`;
+                    console.error(error);
+                } finally {
+                    toggleInput(true); // Enable input after greeting is received
+                }
+            };
+            
+            getInitialGreeting();
+        });
+    </script>
+</body>
+</html>
