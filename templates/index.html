@@ -177,33 +177,21 @@
             <p><b>In a crisis?</b> Call or text 988 in the US & Canada, or find a local helpline.</p>
         </div>
         <form class="chat-form" id="chat-form">
-            <input type="text" id="message-input" placeholder="Loading history..." autocomplete="off" disabled>
+            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" disabled>
             <button type="submit" id="send-button" disabled>Send</button>
         </form>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', () => {
             const chatWindow = document.getElementById('chat-window');
             const chatForm = document.getElementById('chat-form');
             const messageInput = document.getElementById('message-input');
             const sendButton = document.getElementById('send-button');
             const voiceToggle = document.getElementById('voice-toggle');
 
-            let messageHistory = [];
+            let messageHistory = []; // History is stored in this array for the session
             let isVoiceEnabled = true;
-            let userId = null;
-
-            // --- User Identification ---
-            const getOrCreateUserId = () => {
-                let id = localStorage.getItem('empathyBotUserId');
-                if (!id) {
-                    // A simple way to generate a UUID in modern browsers
-                    id = self.crypto.randomUUID();
-                    localStorage.setItem('empathyBotUserId', id);
-                }
-                return id;
-            };
 
             // --- Voice Synthesis Function ---
             const speak = (text) => {
@@ -264,11 +252,8 @@
                     const response = await fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        // **MODIFIED**: Send user_id and only the new message
-                        body: JSON.stringify({ 
-                            user_id: userId,
-                            message: userMessage 
-                        })
+                        // Send the entire history array
+                        body: JSON.stringify({ history: messageHistory })
                     });
 
                     if (!response.ok) {
@@ -291,34 +276,37 @@
                 }
             });
 
-            // --- **NEW** Initialization Function ---
-            const initializeChat = async () => {
-                userId = getOrCreateUserId();
+            // --- Initial Bot Greeting ---
+            const getInitialGreeting = async () => {
                 try {
-                    const response = await fetch(`/get_history?user_id=${userId}`);
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch chat history.');
-                    }
+                    // Add a temporary "loading" message
+                    addMessage("...", "bot");
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        // Send empty history to get the initial prompt
+                        body: JSON.stringify({ history: [] }) 
+                    });
+
+                    if (!response.ok) throw new Error('Failed to connect to the bot.');
+
                     const data = await response.json();
-                    
-                    if (data.history && data.history.length > 0) {
-                        messageHistory = data.history;
-                        chatWindow.innerHTML = ''; // Clear any loading messages
-                        messageHistory.forEach(msg => addMessage(msg.content, msg.role));
-                    } else {
-                        // If there's no history, the bot will provide the initial greeting
-                        // on the user's first message automatically due to the system prompt.
-                    }
+                    const botMessage = data.response;
+
+                    // Replace the "loading" message with the actual greeting
+                    chatWindow.lastChild.textContent = botMessage;
+                    messageHistory.push({ role: 'assistant', content: botMessage });
+                    speak(botMessage);
 
                 } catch (error) {
-                    console.error('Initialization Error:', error);
-                    addMessage(`Error: Could not load your session. Please refresh the page.`, 'bot', true);
+                    chatWindow.lastChild.textContent = `Error: Could not load the bot. Please refresh the page.`;
+                    console.error(error);
                 } finally {
-                    toggleInput(true); // Enable input after history is loaded or an error occurs
+                    toggleInput(true); // Enable input after greeting is received
                 }
             };
             
-            initializeChat();
+            getInitialGreeting();
         });
     </script>
 </body>
