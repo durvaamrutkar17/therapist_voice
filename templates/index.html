@@ -177,13 +177,13 @@
             <p><b>In a crisis?</b> Call or text 988 in the US & Canada, or find a local helpline.</p>
         </div>
         <form class="chat-form" id="chat-form">
-            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" disabled>
+            <input type="text" id="message-input" placeholder="Loading history..." autocomplete="off" disabled>
             <button type="submit" id="send-button" disabled>Send</button>
         </form>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             const chatWindow = document.getElementById('chat-window');
             const chatForm = document.getElementById('chat-form');
             const messageInput = document.getElementById('message-input');
@@ -192,31 +192,42 @@
 
             let messageHistory = [];
             let isVoiceEnabled = true;
+            let userId = null;
+
+            // --- User Identification ---
+            const getOrCreateUserId = () => {
+                let id = localStorage.getItem('empathyBotUserId');
+                if (!id) {
+                    // A simple way to generate a UUID in modern browsers
+                    id = self.crypto.randomUUID();
+                    localStorage.setItem('empathyBotUserId', id);
+                }
+                return id;
+            };
 
             // --- Voice Synthesis Function ---
             const speak = (text) => {
                 if (!isVoiceEnabled || !('speechSynthesis' in window)) {
                     return;
                 }
-                // Cancel any previous speech to prevent overlap
                 window.speechSynthesis.cancel();
-
                 const utterance = new SpeechSynthesisUtterance(text);
-                // Optional: you can try to select a more pleasant voice
-                // let voices = window.speechSynthesis.getVoices();
-                // utterance.voice = voices.find(v => v.name.includes("Google") || v.name.includes("Siri"));
                 utterance.rate = 1.0;
                 utterance.pitch = 1.0;
                 window.speechSynthesis.speak(utterance);
             };
 
             // --- UI Helper Functions ---
-            const addMessage = (content, role) => {
+            const addMessage = (content, role, isError = false) => {
                 const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${role}`; // 'user' or 'bot'
+                let className = `message ${role}`;
+                if (isError) {
+                    className += ' error';
+                }
+                messageDiv.className = className;
                 messageDiv.textContent = content;
                 chatWindow.appendChild(messageDiv);
-                chatWindow.scrollTop = chatWindow.scrollHeight; // Auto-scroll
+                chatWindow.scrollTop = chatWindow.scrollHeight;
             };
             
             const toggleInput = (enabled) => {
@@ -235,7 +246,7 @@
                 isVoiceEnabled = !isVoiceEnabled;
                 voiceToggle.textContent = isVoiceEnabled ? '🔊' : '🔇';
                 if (!isVoiceEnabled) {
-                    window.speechSynthesis.cancel(); // Stop speaking immediately if muted
+                    window.speechSynthesis.cancel();
                 }
             });
 
@@ -253,7 +264,11 @@
                     const response = await fetch('/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ history: messageHistory })
+                        // **MODIFIED**: Send user_id and only the new message
+                        body: JSON.stringify({ 
+                            user_id: userId,
+                            message: userMessage 
+                        })
                     });
 
                     if (!response.ok) {
@@ -266,46 +281,44 @@
 
                     addMessage(botMessage, 'bot');
                     messageHistory.push({ role: 'assistant', content: botMessage });
-                    speak(botMessage); // <--- SPEAK THE BOT'S RESPONSE
+                    speak(botMessage);
 
                 } catch (error) {
                     console.error('Chat Error:', error);
-                    addMessage(`Error: ${error.message}`, 'bot error');
+                    addMessage(`Error: ${error.message}`, 'bot', true);
                 } finally {
                     toggleInput(true);
                 }
             });
 
-            // --- Initial Bot Greeting ---
-            const getInitialGreeting = async () => {
+            // --- **NEW** Initialization Function ---
+            const initializeChat = async () => {
+                userId = getOrCreateUserId();
                 try {
-                    // Add a temporary "loading" message
-                    addMessage("...", "bot");
-                    const response = await fetch('/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ history: [] }) // Send empty history to get the initial prompt
-                    });
-
-                    if (!response.ok) throw new Error('Failed to connect to the bot.');
-
+                    const response = await fetch(`/get_history?user_id=${userId}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch chat history.');
+                    }
                     const data = await response.json();
-                    const botMessage = data.response;
-
-                    // Replace the "loading" message with the actual greeting
-                    chatWindow.lastChild.textContent = botMessage;
-                    messageHistory.push({ role: 'assistant', content: botMessage });
-                    speak(botMessage); // <--- SPEAK THE GREETING
+                    
+                    if (data.history && data.history.length > 0) {
+                        messageHistory = data.history;
+                        chatWindow.innerHTML = ''; // Clear any loading messages
+                        messageHistory.forEach(msg => addMessage(msg.content, msg.role));
+                    } else {
+                        // If there's no history, the bot will provide the initial greeting
+                        // on the user's first message automatically due to the system prompt.
+                    }
 
                 } catch (error) {
-                    chatWindow.lastChild.textContent = `Error: Could not load the bot. Please refresh the page.`;
-                    console.error(error);
+                    console.error('Initialization Error:', error);
+                    addMessage(`Error: Could not load your session. Please refresh the page.`, 'bot', true);
                 } finally {
-                    toggleInput(true); // Enable input after greeting is received
+                    toggleInput(true); // Enable input after history is loaded or an error occurs
                 }
             };
             
-            getInitialGreeting();
+            initializeChat();
         });
     </script>
 </body>
