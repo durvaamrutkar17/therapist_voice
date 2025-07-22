@@ -3,72 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Empathy Bot</title>
+    <title>Gemini Voice & Text Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- ====================================================== -->
+    <!--  EMBEDDED CSS (from style.css)                         -->
+    <!-- ====================================================== -->
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
         }
 
         .chat-container {
-            width: 100%;
+            width: 90%;
             max-width: 600px;
             height: 90vh;
-            max-height: 800px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        .header {
-            background: #6a5acd; /* Slate Blue */
-            color: white;
-            padding: 15px 20px;
-            text-align: left;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header h2 {
+        h1 {
+            text-align: center;
+            color: #333;
+            padding: 20px;
             margin: 0;
-            font-size: 1.4em;
+            background-color: #eee;
+            border-bottom: 1px solid #ddd;
         }
 
-        .header p {
-            margin: 4px 0 0;
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-
-        .voice-toggle {
-            background: none;
-            border: 2px solid white;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-        }
-
-        .voice-toggle:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .chat-window {
+        #chat-box {
             flex-grow: 1;
             padding: 20px;
             overflow-y: auto;
@@ -78,235 +51,211 @@
         }
 
         .message {
-            padding: 12px 18px;
+            padding: 10px 15px;
             border-radius: 20px;
-            max-width: 80%;
+            max-width: 75%;
             line-height: 1.5;
         }
 
-        .message.user {
-            background-color: #6a5acd;
+        .user-message {
+            background-color: #007bff;
             color: white;
-            border-bottom-right-radius: 5px;
             align-self: flex-end;
+            border-bottom-right-radius: 5px;
         }
 
-        .message.bot {
-            background-color: #e5e7eb;
+        .bot-message {
+            background-color: #e9e9eb;
             color: #333;
-            border-bottom-left-radius: 5px;
             align-self: flex-start;
+            border-bottom-left-radius: 5px;
         }
 
-        .message.bot.error {
-            background-color: #fee2e2;
-            color: #ef4444;
-        }
-
-        .crisis-footer {
-            padding: 10px 20px;
-            text-align: center;
-            background: #fdfde7;
-            border-top: 1px solid #e0e0e0;
-            font-size: 0.85em;
-        }
-
-        .crisis-footer p {
-            margin: 0;
-        }
-
-        .chat-form {
+        .input-container {
             display: flex;
             padding: 15px;
-            border-top: 1px solid #e0e0e0;
-            background: #f8f8f8;
+            border-top: 1px solid #ddd;
+            background-color: #f8f9fa;
         }
 
-        #message-input {
+        #user-input {
             flex-grow: 1;
-            padding: 12px;
             border: 1px solid #ccc;
             border-radius: 20px;
-            margin-right: 10px;
-            font-size: 1em;
-        }
-
-        #message-input:focus {
+            padding: 10px 15px;
+            font-size: 16px;
             outline: none;
-            border-color: #6a5acd;
-        }
-        
-        #message-input:disabled {
-            background-color: #f0f0f0;
         }
 
-        #send-button {
-            padding: 12px 20px;
+        #send-btn, #record-btn {
+            background: none;
             border: none;
-            background-color: #6a5acd;
-            color: white;
-            border-radius: 20px;
+            font-size: 24px;
             cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.2s;
+            color: #007bff;
+            padding: 0 12px;
+            transition: color 0.2s;
         }
 
-        #send-button:hover {
-            background-color: #5a4bbf;
+        #send-btn:hover, #record-btn:hover {
+            color: #0056b3;
         }
 
-        #send-button:disabled {
-            background-color: #a9a1e2;
-            cursor: not-allowed;
+        .status-text {
+            text-align: center;
+            color: #888;
+            padding: 5px;
+            font-size: 14px;
+            height: 20px;
+        }
+
+        #record-btn.recording {
+            color: #dc3545;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
         }
     </style>
 </head>
 <body>
     <div class="chat-container">
-        <div class="header">
-            <div class="header-content">
-                <h2>AI Empathy Bot</h2>
-                <p>A supportive space to talk. Not a replacement for a therapist.</p>
+        <h1>Gemini Chatbot</h1>
+        <div id="chat-box">
+            <div class="message bot-message">
+                <p>Hello! How can I help you today?</p>
             </div>
-            <button id="voice-toggle" class="voice-toggle" title="Toggle Voice Output">🔊</button>
         </div>
-        <div class="chat-window" id="chat-window">
-            <!-- Messages will be injected here by JavaScript -->
+        <div class="input-container">
+            <input type="text" id="user-input" placeholder="Type or say something...">
+            <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+            <button id="record-btn"><i class="fa-solid fa-microphone"></i></button>
         </div>
-        <div class="crisis-footer">
-            <p><b>In a crisis?</b> Call or text 988 in the US & Canada, or find a local helpline.</p>
-        </div>
-        <form class="chat-form" id="chat-form">
-            <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off" disabled>
-            <button type="submit" id="send-button" disabled>Send</button>
-        </form>
+        <p id="status" class="status-text"></p>
     </div>
 
+    <!-- ====================================================== -->
+    <!--  EMBEDDED JAVASCRIPT (from script.js)                  -->
+    <!-- ====================================================== -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const chatWindow = document.getElementById('chat-window');
-            const chatForm = document.getElementById('chat-form');
-            const messageInput = document.getElementById('message-input');
-            const sendButton = document.getElementById('send-button');
-            const voiceToggle = document.getElementById('voice-toggle');
+        document.addEventListener("DOMContentLoaded", () => {
+            // --- DOM Elements ---
+            const chatBox = document.getElementById("chat-box");
+            const userInput = document.getElementById("user-input");
+            const sendBtn = document.getElementById("send-btn");
+            const recordBtn = document.getElementById("record-btn");
+            const status = document.getElementById("status");
 
-            let messageHistory = []; // History is stored in this array for the session
-            let isVoiceEnabled = true;
+            // --- Web Speech API for Recognition (Speech-to-Text) ---
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
 
-            // --- Voice Synthesis Function ---
-            const speak = (text) => {
-                if (!isVoiceEnabled || !('speechSynthesis' in window)) {
-                    return;
-                }
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                window.speechSynthesis.speak(utterance);
-            };
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false; // Stop listening after one phrase
+                recognition.lang = "en-US";
 
-            // --- UI Helper Functions ---
-            const addMessage = (content, role, isError = false) => {
-                const messageDiv = document.createElement('div');
-                let className = `message ${role}`;
-                if (isError) {
-                    className += ' error';
-                }
-                messageDiv.className = className;
-                messageDiv.textContent = content;
-                chatWindow.appendChild(messageDiv);
-                chatWindow.scrollTop = chatWindow.scrollHeight;
-            };
-            
-            const toggleInput = (enabled) => {
-                messageInput.disabled = !enabled;
-                sendButton.disabled = !enabled;
-                if (enabled) {
-                    messageInput.placeholder = "Type your message here...";
-                    messageInput.focus();
-                } else {
-                    messageInput.placeholder = "Waiting for response...";
-                }
-            };
+                recognition.onstart = () => {
+                    status.textContent = "Recording...";
+                    recordBtn.classList.add("recording");
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    userInput.value = transcript;
+                    status.textContent = "Processing...";
+                    sendMessage(); // Automatically send after recording
+                };
+
+                recognition.onerror = (event) => {
+                    status.textContent = `Error: ${event.error}`;
+                    recordBtn.classList.remove("recording");
+                };
+
+                recognition.onend = () => {
+                    status.textContent = ""; // Clear status
+                    recordBtn.classList.remove("recording");
+                };
+
+                recordBtn.addEventListener("click", () => {
+                    recognition.start();
+                });
+
+            } else {
+                status.textContent = "Speech recognition not supported in this browser.";
+                recordBtn.disabled = true;
+            }
+
 
             // --- Event Listeners ---
-            voiceToggle.addEventListener('click', () => {
-                isVoiceEnabled = !isVoiceEnabled;
-                voiceToggle.textContent = isVoiceEnabled ? '🔊' : '🔇';
-                if (!isVoiceEnabled) {
-                    window.speechSynthesis.cancel();
+            sendBtn.addEventListener("click", sendMessage);
+            userInput.addEventListener("keypress", (event) => {
+                if (event.key === "Enter") {
+                    sendMessage();
                 }
             });
 
-            chatForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const userMessage = messageInput.value.trim();
-                if (!userMessage) return;
 
-                addMessage(userMessage, 'user');
-                messageHistory.push({ role: 'user', content: userMessage });
-                messageInput.value = '';
-                toggleInput(false);
+            // --- Core Functions ---
+            function sendMessage() {
+                const messageText = userInput.value.trim();
+                if (messageText === "") return;
 
-                try {
-                    const response = await fetch('/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        // Send the entire history array
-                        body: JSON.stringify({ history: messageHistory })
-                    });
+                displayMessage(messageText, "user");
+                userInput.value = ""; // Clear input field
 
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.error || 'An unknown error occurred.');
+                // Send message to Flask backend
+                fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ message: messageText }),
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.error) {
+                        displayMessage(data.error, "bot");
+                    } else {
+                        displayMessage(data.response, "bot");
+                        speak(data.response); // Speak the bot's response
                     }
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                    displayMessage("Sorry, something went wrong. Please try again.", "bot");
+                });
+            }
 
-                    const data = await response.json();
-                    const botMessage = data.response;
+            function displayMessage(text, sender) {
+                const messageElement = document.createElement("div");
+                messageElement.classList.add("message", `${sender}-message`);
+                const p = document.createElement("p");
+                p.textContent = text;
+                messageElement.appendChild(p);
+                chatBox.appendChild(messageElement);
+                // Scroll to the latest message
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
 
-                    addMessage(botMessage, 'bot');
-                    messageHistory.push({ role: 'assistant', content: botMessage });
-                    speak(botMessage);
 
-                } catch (error) {
-                    console.error('Chat Error:', error);
-                    addMessage(`Error: ${error.message}`, 'bot', true);
-                } finally {
-                    toggleInput(true);
+            // --- Web Speech API for Synthesis (Text-to-Speech) ---
+            function speak(text) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    // Optional: Configure voice, pitch, rate
+                    // const voices = window.speechSynthesis.getVoices();
+                    // utterance.voice = voices.find(voice => voice.name === 'Google UK English Female');
+                    // utterance.pitch = 1;
+                    // utterance.rate = 1;
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    console.warn("Text-to-speech not supported in this browser.");
                 }
-            });
-
-            // --- Initial Bot Greeting ---
-            const getInitialGreeting = async () => {
-                try {
-                    // Add a temporary "loading" message
-                    addMessage("...", "bot");
-                    const response = await fetch('/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        // Send empty history to get the initial prompt
-                        body: JSON.stringify({ history: [] }) 
-                    });
-
-                    if (!response.ok) throw new Error('Failed to connect to the bot.');
-
-                    const data = await response.json();
-                    const botMessage = data.response;
-
-                    // Replace the "loading" message with the actual greeting
-                    chatWindow.lastChild.textContent = botMessage;
-                    messageHistory.push({ role: 'assistant', content: botMessage });
-                    speak(botMessage);
-
-                } catch (error) {
-                    chatWindow.lastChild.textContent = `Error: Could not load the bot. Please refresh the page.`;
-                    console.error(error);
-                } finally {
-                    toggleInput(true); // Enable input after greeting is received
-                }
-            };
-            
-            getInitialGreeting();
+            }
         });
     </script>
 </body>
